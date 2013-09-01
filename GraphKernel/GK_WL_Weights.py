@@ -64,7 +64,7 @@ class GK_WL_Weights(GK_Base):
             if(n_max < graph_list[i].number_of_nodes()):
                 n_max = graph_list[i].number_of_nodes()
             
-        phi = np.zeros((n_max, n), dtype = np.float)
+        phi = np.zeros((n_nodes, n), dtype = np.float)
         #each column j of phi will be the explicit feature representation
         # for the graph j.
         #n_max is enough to store all possible labels
@@ -90,11 +90,14 @@ class GK_WL_Weights(GK_Base):
                     sm = 0
                     for k in lists[i][j]:
                         if j < k:
-                            sm += e_aux[j,k]
+                            sm += np.abs(e_aux[j,k])
+                    print sm
                     phi[int(sm), i] += 1
+#                pdb.set_trace()    
                 if verbose:
                     print(str(i + 1) + " from " + str(n) + " completed")
-                                   
+                    
+                       
         #Simplified vectorial representation of graphs (just taking the 
         #vectors before the kernel iterations), i.e., it is just the original 
         #nodes degree.
