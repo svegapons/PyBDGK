@@ -4,7 +4,7 @@ import numpy as np
 import scipy.stats as st
 import networkx as nx
 import sklearn.metrics.pairwise as skpw
-from sklearn.neighbors import kneighbors_graph
+from sklearn.neighbors import kneighbors_graph, radius_neighbors_graph
 from sklearn.cluster import MiniBatchKMeans, KMeans, Ward
 import PyBDGK.IntermRepresentation.IntermRepresentation as ir
 from PyBDGK.GraphEncoding.GE_Base import GE_Base
@@ -18,8 +18,8 @@ class GE_NeighConst_HCA(GE_Base):
     hierarchical clustering algorithms.
     """
 
-    def encode(self, interm_rep, neighborhood_size = 27,
-               clust_ratio=200,
+    def encode(self, interm_rep, neighborhood_size = 26,
+               clust_ratio=10,
                encoding='geometrical',
                similarity_measure='pearson',
                threshold=0.3, n_jobs=1, **kwds):
@@ -53,10 +53,14 @@ class GE_NeighConst_HCA(GE_Base):
         #"neighborhood_size" neighbors.
         #
         conn = kneighbors_graph(interm_rep.arr_xyz, n_neighbors=neighborhood_size)
+#        conn_n = kneighbors_graph(interm_rep.arr_xyz, n_neighbors=neighborhood_size)
+#        conn_r = radius_neighbors_graph(interm_rep.arr_xyz, radius=10)
+#        conn = conn_n * conn_r
 
         #Hierarchical clustering algorithm. The number of clusters is defined
         #accoring to the parameter "clust_ratio".
         ward = Ward(n_clusters=len(interm_rep.arr_xyz)/clust_ratio, connectivity=conn)
+        #ward = Ward(n_clusters=60, connectivity=conn)
 
         #Type of encoding: geometrical (only xyz data is used) or
         # functional (voxel time series is used).
@@ -68,7 +72,7 @@ class GE_NeighConst_HCA(GE_Base):
         labels = ward.labels_
 
         #Plotting the voxels with the cluster labels.
-#        pp.plot_clustering_intermediate_representation(interm_rep, labels)
+        #pp.plot_clustering_intermediate_representation(interm_rep, labels*10)
 
 
         #Computing the unique cluster indentifiers
@@ -91,6 +95,10 @@ class GE_NeighConst_HCA(GE_Base):
 
             cont += 1
 
+
+        #plotting the voxels time series for each cluster
+        #pp.plot_interm_representation_time_series(ir.IntermRep(mean_voxels, mean_xyz))
+
         #The new intermediate representation is given by mean_voxels and
         # mean_xyz.
 
@@ -110,8 +118,8 @@ class GE_NeighConst_HCA(GE_Base):
                     adj_mat[k,j] = 1
 
 
-        #Weighted encoding (for graph kernels that work with weighted graphs)
-        #------------------------------------
+#        #Weighted encoding (for graph kernels that work with weighted graphs)
+#        #------------------------------------
 #        adj_mat = np.zeros((len(mean_voxels), len(mean_voxels)),
 #                           dtype = np.float)
 #        for j in range(len(mean_voxels) - 1):
@@ -122,14 +130,43 @@ class GE_NeighConst_HCA(GE_Base):
 #                    aux = skpw.pairwise_kernel(mean_voxels[j], mean_voxels[k],
 #                                               metric = similarity_measure,
 #                                               n_jobs = n_jobs)
-#                if aux >= threshold:
-#                    adj_mat[j,k] = aux
-#                    adj_mat[k,j] = aux
-        #------------------------------------
+##                if aux >= threshold:
+##                    adj_mat[j,k] = aux
+##                    adj_mat[k,j] = aux
+#                adj_mat[j,k] = adj_mat[k,j] = aux
+#        adj_mat = (adj_mat - np.mean(adj_mat))/np.std(adj_mat)
+#        adj_mat = (adj_mat - np.min(adj_mat))/(np.max(adj_mat) - np.min(adj_mat))
+#        adj_mat = np.where(adj_mat>=threshold, 1, 0)
+#        #------------------------------------
 
 
         #Building the graph from the adjacency matrix
         g = nx.from_numpy_matrix(adj_mat)
+
+        #Spliting the node degrees into some categories and using them as node labels.
+#        num_lab = 5
+        deg = g.degree()
+#        for k in deg:
+#            deg[k]/= num_lab
+        nx.set_node_attributes(g, 'node_label', deg)
+
+        ############
+        #Storing the mean time-series of each parcell as a node attribute
+        ts_att = {}
+        mv = mean_voxels.tolist()
+        for pos in range(len(mv)):
+            ts_att[pos] = mv[pos]
+        nx.set_node_attributes(g, 'time_series', ts_att)
+
+
+
+        #Saving the graphs for CLFR subject (the one for which I have the structural data)
+#        if interm_rep.subj_name == 'CLFR':
+#            nx.write_gexf(g, 'graph_gephi_format.gexf')
+#            np.savetxt('CLFR_clusters_xyz.txt', mean_xyz, fmt='%1d', delimiter=' ')
+#            edges = np.array(np.where(adj_mat==1)).T
+#            np.savetxt('CLFR_clusters_timeseries_cond%s.txt' %(interm_rep.cls), edges, fmt='%1d', delimiter=' ')
+
 
         #Plot Graphs
         #pp.plot_graph(mean_xyz, g)

@@ -6,7 +6,7 @@ import sklearn.neighbors
 import random
 import pdb
 
-   
+
 def leave_one_out_cv(gram_matrix, labels, alg = 'SVM'):
     """
     leave-one-out cross-validation
@@ -31,10 +31,10 @@ def leave_one_out_cv(gram_matrix, labels, alg = 'SVM'):
 
     print "Mean accuracy: %f" %(np.mean(scores))
     print "Stdv: %f" %(np.std(scores))
-    
+
     return preds, scores
-    
-    
+
+
 def k_fold_cv(gram_matrix, labels, folds = 10, alg = 'SVM', shuffle = True):
     """
     K-fold cross-validation
@@ -57,15 +57,15 @@ def k_fold_cv(gram_matrix, labels, folds = 10, alg = 'SVM', shuffle = True):
             knn.fit(X_train, y_train)
             preds += knn.predict(X_test).tolist()
             score = knn.score(X_test, y_test)
-            
+
         scores.append(score)
-        
+
     print "Mean accuracy: %f" %(np.mean(scores))
     print "Stdv: %f" %(np.std(scores))
-    
+
     return preds, scores
-    
-    
+
+
 def subject_fold_cv(gram_matrix, labels, n_subjects, alg = 'SVM'):
     """
     Leave-one-subject-out cross-validation
@@ -82,18 +82,18 @@ def subject_fold_cv(gram_matrix, labels, n_subjects, alg = 'SVM'):
             svm.fit(X_train, y_train)
             preds += svm.predict(X_test).tolist()
             score = svm.score(X_test, y_test)
+#            svm.coef_
         elif(alg == 'kNN'):
             knn = sklearn.neighbors.KNeighborsClassifier(1)
             knn.fit(X_train, y_train)
             preds += knn.predict(X_test).tolist()
             score = knn.score(X_test, y_test)
-            
+
         scores.append(score)
-        
+
     print "Mean accuracy: %f" %(np.mean(scores))
     print "Stdv: %f" %(np.std(scores))
-    
-    return preds, scores
-        
 
-        
+    return preds, scores
+
+

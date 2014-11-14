@@ -24,9 +24,9 @@ class GE_FuncConn_WeightedEncoding(GE_Base):
 
     def encode(self, interm_rep, clust_alg='MiniBatchKMeans',
                n_clusters=-1,
-               clust_ratio=10,
+               clust_ratio=100,
                similarity_measure="pearson",
-               threshold=0.5, n_jobs=1, **kwds):
+               threshold=0.0, n_jobs=1, **kwds):
         """
         Parameters
         ----------
@@ -90,7 +90,7 @@ class GE_FuncConn_WeightedEncoding(GE_Base):
         labels = ca.labels_
 
         #Plotting the voxels with the cluster labels.
-        pp.plot_clustering_intermediate_representation(interm_rep, labels)
+#        pp.plot_clustering_intermediate_representation(interm_rep, labels)
 
         #Computing the unique cluster indentifiers
         l_unique = np.unique(labels)
@@ -143,7 +143,7 @@ class GE_FuncConn_WeightedEncoding(GE_Base):
 #        nx.draw_networkx(g, pos = p, labels = g.degree())
 
         #Plot Graphs
-        pp.plot_graph(mean_xyz, g)
+#        pp.plot_graph(mean_xyz, g)
 
         return g
 

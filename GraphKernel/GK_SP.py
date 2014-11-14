@@ -6,22 +6,27 @@ import copy
 import pdb
 
 
-class GK_WL_Weights(GK_Base):
+class GK_SP(GK_Base):
     """
-    Simple weighted version of the Weisfeiler_Lehman graph kernel.
+    Shortest path graph kernel.
     """
-    def compare(self, g1, g2, h=1, nl=False, verbose=False):
+    
+    def compare(self, g1, g2, verbose=False):
         """
         Compute the kernel value between the two graphs.
-        @param g1: First graph (Networkx)
-        @param g2: Second graph (Networkx)
-        @param h: a natural number (number of iterations of WL)
-        @param nl: a boolean (True if we want to use original node labels,
-                   False otherwise)
-        @return: k: the similarity value between the two graphs.
         """
-        gl = [g1, g2]
-        return self.compare_list(gl, h, nl, verbose)[0,1]
+        djk1 = nx.Graph(nx.all_pairs_dijkstra_path_length(g1))
+        djk1.remove_edges_from(djk1.selfloop_edges())
+        
+        djk2 = nx.all_pairs_dijkstra_path_length(g2)
+        djk2.remove_edges_from(djk2.selfloop_edges())
+        
+
+    def edge_kernel(e1, e2):
+        """
+        Base kernel to compare a pair of edges.
+        """     
+        
 
 
     def compare_normalized(self, g1, g2, h=1, nl=False, verbose=False):
@@ -30,8 +35,7 @@ class GK_WL_Weights(GK_Base):
         the kernel is given by the equation:
         k_norm(g1, g2) = k(g1, g2) / sqrt(k(g1,g1) * k(g2,g2))
         """
-        gl = [g1, g2]
-        return self.compare_list_normalized(gl, h, nl, verbose)[0,1]
+
 
 
     def compare_list(self, graph_list, h=1, nl=False, verbose=False):
@@ -64,7 +68,7 @@ class GK_WL_Weights(GK_Base):
             if(n_max < graph_list[i].number_of_nodes()):
                 n_max = graph_list[i].number_of_nodes()
 
-        phi = np.zeros((n_nodes, n), dtype = np.float)
+        phi = np.zeros((n_max, n), dtype = np.uint64)
         #each column j of phi will be the explicit feature representation
         # for the graph j.
         #n_max is enough to store all possible labels
@@ -81,22 +85,28 @@ class GK_WL_Weights(GK_Base):
         # mapping from multiset labels (strings) to short labels (integers)
 
         if nl == True:
-            raise Exception("Not implemented for this graph kernel.")
+            for i in range(n):
+                l_aux = nx.get_node_attributes(graph_list[i],
+                                               'node_label').values()
+                #It is assumed that the graph has an attribute 'node_label'
+                labels[i] = np.zeros(len(l_aux), dtype = np.int32)
+
+                for j in range(len(l_aux)):
+                    if not label_lookup.has_key(l_aux[j]):
+                        label_lookup[l_aux[j]] = label_counter
+                        labels[i][j] = label_counter
+                        label_counter += 1
+                    else:
+                        labels[i][j] = label_lookup[l_aux[j]]
+                    #labels are associated to a natural number starting with 0.
+                    phi[labels[i][j], i] += 1
         else:
             for i in range(n):
-                e_aux = nx.get_edge_attributes(graph_list[i], 'weight')
-                #It is assumed that the graph has an attribute 'weight'.
-                for j in range(len(lists[i])):
-                    sm = 0
-                    for k in lists[i][j]:
-                        if j < k:
-                            sm += np.abs(e_aux[j,k])
-#                    print sm
-                    phi[int(sm), i] += 1
-#                pdb.set_trace()
+                labels[i] = np.array(graph_list[i].degree().values())
+                for j in range(len(labels[i])):
+                    phi[labels[i][j], i] += 1
                 if verbose:
                     print(str(i + 1) + " from " + str(n) + " completed")
-
 
         #Simplified vectorial representation of graphs (just taking the
         #vectors before the kernel iterations), i.e., it is just the original
@@ -117,12 +127,12 @@ class GK_WL_Weights(GK_Base):
             label_lookup = {}
             label_counter = 0
 
-            phi = np.zeros((n_nodes, n), dtype = np.float)
+            phi = np.zeros((n_nodes, n), dtype = np.uint64)
             for i in range(n):
                 for v in range(len(lists[i])):
                     # form a multiset label of the node v of the i'th graph
                     # and convert it to a string
-                    pdb.set_trace()
+#                    pdb.set_trace()
                     long_label = np.concatenate((np.array([labels[i][v]]), np.sort(labels[i][lists[i][v]])))
                     long_label_string = str(long_label)
                     # if the multiset label has not yet occurred, add it to the
@@ -142,6 +152,7 @@ class GK_WL_Weights(GK_Base):
                 print("Number of compressed labels: ", str(label_counter))
             #pdb.set_trace()
 
+#            self.vectors = np.hstack((self.vectors, phi.transpose()))
             k += np.dot(phi.transpose(), phi)
             labels = copy.deepcopy(new_labels)
             it = it + 1
